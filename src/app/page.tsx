@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { scoreTender } from '@/lib/scoring';
 import { SyncTendersButton } from '@/components/sync-tenders-button';
+import { AnalyzeTender } from '@/components/analyze-tender';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,6 +164,13 @@ const Home = async () => {
                     {breakdown.reasons.join(' · ')}
                   </p>
                 )}
+
+                <AnalyzeTender
+                  tenderId={tender.id}
+                  aiSummary={tender.aiSummary}
+                  aiDecision={tender.aiDecision}
+                  aiReason={tender.aiReason}
+                />
               </li>
             ))}
           </ul>
