@@ -33,6 +33,12 @@ model DemoUser {
   aiUses   Int    @default(0)
 }
 
+model IngestState {
+  id        String   @id
+  page      Int      @default(1)
+  updatedAt DateTime @updatedAt
+}
+
 model Profile {
   id           String   @id @default(uuid())
   companyName  String
