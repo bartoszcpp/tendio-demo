@@ -1,12 +1,13 @@
 import 'server-only';
 
 import { prisma } from '@/lib/prisma';
-import { scoreTender } from '@/lib/scoring';
+import { persistTenders, type MappedTender, type PersistResult } from '@/lib/tenders';
 
 const EZAMOWIENIA_API = 'https://ezamowienia.gov.pl/mo-board/api/v1/notice';
 export const NOTICE_PAGE_SIZE = 100;
 const LOOKBACK_DAYS = 60;
 const INGEST_STATE_ID = 'default';
+const SOURCE = 'ezamowienia';
 
 type EzamowieniaNotice = {
   noticeNumber?: string;
@@ -19,7 +20,7 @@ type EzamowieniaNotice = {
   htmlBody?: string | null;
 };
 
-export type IngestResult = { fetched: number; added: number };
+export type IngestResult = PersistResult;
 export type IngestPageResult = IngestResult & { page: number; nextPage: number };
 
 const toDateParam = (date: Date) => date.toISOString().slice(0, 10);
@@ -54,57 +55,26 @@ export const fetchNotices = async (pageNumber = 1): Promise<EzamowieniaNotice[]>
   return Array.isArray(data) ? data : [];
 };
 
-export const ingestNotices = async (notices: EzamowieniaNotice[]): Promise<IngestResult> => {
-  const unique = Array.from(
-    new Map(
-      notices
-        .filter((notice): notice is EzamowieniaNotice & { noticeNumber: string } =>
-          Boolean(notice.noticeNumber),
-        )
-        .map((notice) => [notice.noticeNumber, notice] as const),
-    ).values(),
+const mapNotice = (notice: EzamowieniaNotice & { noticeNumber: string }): MappedTender => ({
+  externalId: notice.noticeNumber,
+  title: notice.orderObject?.trim() || 'Ogłoszenie bez tytułu',
+  description:
+    [notice.organizationName, notice.organizationCity].filter(Boolean).join(', ') || null,
+  cpvCodes: notice.cpvCode ?? '',
+  region: extractRegion(notice.htmlBody),
+  publicationDate: notice.publicationDate ? new Date(notice.publicationDate) : null,
+  url: buildTenderUrl(notice.tenderId),
+  source: SOURCE,
+});
+
+export const ingestNotices = async (notices: EzamowieniaNotice[]): Promise<IngestResult> =>
+  persistTenders(
+    notices
+      .filter((notice): notice is EzamowieniaNotice & { noticeNumber: string } =>
+        Boolean(notice.noticeNumber),
+      )
+      .map(mapNotice),
   );
-
-  if (unique.length === 0) return { fetched: 0, added: 0 };
-
-  const existing = await prisma.tender.findMany({
-    where: { externalId: { in: unique.map(({ noticeNumber }) => noticeNumber) } },
-    select: { externalId: true },
-  });
-  const existingIds = new Set(existing.map(({ externalId }) => externalId));
-
-  const fresh = unique.filter(({ noticeNumber }) => !existingIds.has(noticeNumber));
-
-  if (fresh.length > 0) {
-    const profile = await prisma.profile.findFirst();
-
-    await prisma.tender.createMany({
-      data: fresh.map((notice) => {
-        const title = notice.orderObject?.trim() || 'Ogłoszenie bez tytułu';
-        const description =
-          [notice.organizationName, notice.organizationCity].filter(Boolean).join(', ') || null;
-        const cpvCodes = notice.cpvCode ?? '';
-        const region = extractRegion(notice.htmlBody);
-        const score = profile
-          ? scoreTender({ title, description, cpvCodes, region }, profile).score
-          : 0;
-
-        return {
-          externalId: notice.noticeNumber,
-          title,
-          description,
-          cpvCodes,
-          region,
-          publicationDate: notice.publicationDate ? new Date(notice.publicationDate) : null,
-          url: buildTenderUrl(notice.tenderId),
-          score,
-        };
-      }),
-    });
-  }
-
-  return { fetched: unique.length, added: fresh.length };
-};
 
 export const ingestNextPage = async (): Promise<IngestPageResult> => {
   const state = await prisma.ingestState.upsert({

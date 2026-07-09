@@ -17,6 +17,7 @@ model Tender {
   region          String?
   publicationDate DateTime?
   url             String
+  source          String   @default("ezamowienia")
   
   score           Int?     
   aiSummary       String?  
@@ -36,6 +37,7 @@ model DemoUser {
 model IngestState {
   id        String   @id
   page      Int      @default(1)
+  tedPage   Int      @default(1)
   updatedAt DateTime @updatedAt
 }
 

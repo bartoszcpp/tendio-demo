@@ -1,8 +1,9 @@
 import { revalidatePath } from 'next/cache';
 import { ingestNextPage } from '@/lib/ingest';
+import { ingestTedNextPage } from '@/lib/ted';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export const GET = async (request: Request) => {
   const secret = process.env.CRON_SECRET;
@@ -12,8 +13,8 @@ export const GET = async (request: Request) => {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const result = await ingestNextPage();
+  const [ezamowienia, ted] = await Promise.all([ingestNextPage(), ingestTedNextPage()]);
   revalidatePath('/');
 
-  return Response.json({ ok: true, ...result });
+  return Response.json({ ok: true, ezamowienia, ted });
 };

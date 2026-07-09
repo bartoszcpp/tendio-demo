@@ -29,6 +29,28 @@ const Chip = ({ children }: { children: React.ReactNode }) => (
   </span>
 );
 
+const sourceBadge: Record<string, { label: string; className: string }> = {
+  ezamowienia: {
+    label: 'e-Zamówienia',
+    className: 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
+  },
+  ted: {
+    label: 'TED · UE',
+    className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300',
+  },
+};
+
+const SourceBadge = ({ source }: { source: string }) => {
+  const badge = sourceBadge[source] ?? sourceBadge.ezamowienia;
+  return (
+    <span
+      className={`rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${badge.className}`}
+    >
+      {badge.label}
+    </span>
+  );
+};
+
 type MatchTier = { label: string; text: string; bar: string; accent: string };
 
 const matchTier = (percent: number): MatchTier => {
@@ -183,7 +205,7 @@ const Home = async () => {
 
         {tenders.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 p-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            Brak zapisanych ogłoszeń. Kliknij „Pobierz najnowsze ogłoszenia”, aby zasilić bazę.
+            Brak zapisanych ogłoszeń. Użyj przycisków powyżej, aby pobrać dane z e-Zamówień lub TED.
           </div>
         ) : (
           <ul className="space-y-3">
@@ -198,6 +220,9 @@ const Home = async () => {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <SourceBadge source={tender.source} />
+                      </div>
                       <a
                         href={tender.url}
                         target="_blank"
