@@ -77,11 +77,16 @@ export const AnalyzeTender = ({ tenderId, aiSummary, aiDecision, aiReason, remai
   return (
     <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-center justify-between gap-3">
-        <span
-          className={`rounded-md px-2 py-0.5 text-xs font-semibold ${decisionStyle[analysis.recommendation]}`}
-        >
-          {decisionLabel[analysis.recommendation]}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+            Rekomendacja AI
+          </span>
+          <span
+            className={`rounded-md px-2.5 py-1 text-sm font-bold ${decisionStyle[analysis.recommendation]}`}
+          >
+            {decisionLabel[analysis.recommendation]}
+          </span>
+        </div>
         {!blocked && (
           <button
             type="button"
@@ -93,7 +98,7 @@ export const AnalyzeTender = ({ tenderId, aiSummary, aiDecision, aiReason, remai
           </button>
         )}
       </div>
-      <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-200">{analysis.summary}</p>
+      <p className="mt-3 text-sm font-medium text-zinc-800 dark:text-zinc-100">{analysis.summary}</p>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{analysis.reason}</p>
       {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>

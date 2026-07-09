@@ -13,6 +13,11 @@ export const POINTS = {
   region: 30,
 } as const;
 
+export const MATCH_REFERENCE = 100;
+
+export const matchPercent = (score: number) =>
+  Math.max(0, Math.min(100, Math.round((score / MATCH_REFERENCE) * 100)));
+
 const splitList = (value: string) =>
   value
     .split(',')
