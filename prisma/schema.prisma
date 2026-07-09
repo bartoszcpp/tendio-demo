@@ -1,0 +1,36 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tender {
+  id              String   @id @default(uuid())
+  externalId      String   @unique
+  title           String
+  description     String?
+  cpvCodes        String   
+  url             String
+  
+  score           Int?     
+  aiSummary       String?  
+  aiDecision      String?  
+  aiReason        String?  
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Profile {
+  id           String   @id @default(uuid())
+  companyName  String
+  industry     String
+  keywords     String   
+  cpvCodes     String   
+  regions      String   
+  minBudget    Float
+  maxBudget    Float
+}
