@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { scoreTender } from '@/lib/scoring';
 
 const EZAMOWIENIA_API = 'https://ezamowienia.gov.pl/mo-board/api/v1/notice';
-const NOTICE_PAGE_SIZE = 30;
+const NOTICE_PAGE_SIZE = 100;
 const LOOKBACK_DAYS = 30;
 
 type EzamowieniaNotice = {
@@ -15,6 +16,7 @@ type EzamowieniaNotice = {
   tenderId?: string | null;
   organizationName?: string | null;
   organizationCity?: string | null;
+  htmlBody?: string | null;
 };
 
 export type SyncResult = { fetched: number; added: number };
@@ -25,6 +27,11 @@ const buildTenderUrl = (tenderId?: string | null) =>
   tenderId
     ? `https://ezamowienia.gov.pl/mp-client/search/list/${tenderId}`
     : 'https://ezamowienia.gov.pl';
+
+const extractRegion = (htmlBody?: string | null) => {
+  const match = htmlBody?.match(/Województwo:\s*<span[^>]*>([^<]+)<\/span>/i);
+  return match ? match[1].trim() : null;
+};
 
 const fetchNotices = async (): Promise<EzamowieniaNotice[]> => {
   const to = new Date();
@@ -72,16 +79,30 @@ export const syncTenders = async (): Promise<SyncResult> => {
   const fresh = unique.filter(({ noticeNumber }) => !existingIds.has(noticeNumber));
 
   if (fresh.length > 0) {
+    const profile = await prisma.profile.findFirst();
+
     await prisma.tender.createMany({
-      data: fresh.map((notice) => ({
-        externalId: notice.noticeNumber,
-        title: notice.orderObject?.trim() || 'Ogłoszenie bez tytułu',
-        description:
-          [notice.organizationName, notice.organizationCity].filter(Boolean).join(', ') || null,
-        cpvCodes: notice.cpvCode ?? '',
-        publicationDate: notice.publicationDate ? new Date(notice.publicationDate) : null,
-        url: buildTenderUrl(notice.tenderId),
-      })),
+      data: fresh.map((notice) => {
+        const title = notice.orderObject?.trim() || 'Ogłoszenie bez tytułu';
+        const description =
+          [notice.organizationName, notice.organizationCity].filter(Boolean).join(', ') || null;
+        const cpvCodes = notice.cpvCode ?? '';
+        const region = extractRegion(notice.htmlBody);
+        const score = profile
+          ? scoreTender({ title, description, cpvCodes, region }, profile).score
+          : 0;
+
+        return {
+          externalId: notice.noticeNumber,
+          title,
+          description,
+          cpvCodes,
+          region,
+          publicationDate: notice.publicationDate ? new Date(notice.publicationDate) : null,
+          url: buildTenderUrl(notice.tenderId),
+          score,
+        };
+      }),
     });
   }
 

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { scoreTender } from '@/lib/scoring';
 import { SyncTendersButton } from '@/components/sync-tenders-button';
 
 export const dynamic = 'force-dynamic';
@@ -24,11 +25,32 @@ const Chip = ({ children }: { children: React.ReactNode }) => (
   </span>
 );
 
+const scoreStyle = (score: number) => {
+  if (score >= 50) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400';
+  if (score >= 20) return 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400';
+  return 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400';
+};
+
+const ScoreBadge = ({ score }: { score: number }) => (
+  <span
+    className={`shrink-0 rounded-lg px-2.5 py-1 text-sm font-semibold tabular-nums ${scoreStyle(score)}`}
+  >
+    {score} pkt
+  </span>
+);
+
 const Home = async () => {
   const [profile, tenders] = await Promise.all([
     prisma.profile.findFirst(),
     prisma.tender.findMany({ orderBy: { publicationDate: 'desc' } }),
   ]);
+
+  const scored = tenders
+    .map((tender) => ({
+      tender,
+      breakdown: profile ? scoreTender(tender, profile) : { score: 0, reasons: [] as string[] },
+    }))
+    .sort((a, b) => b.breakdown.score - a.breakdown.score);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 sm:py-16">
@@ -105,7 +127,7 @@ const Home = async () => {
           </div>
         ) : (
           <ul className="space-y-3">
-            {tenders.map((tender) => (
+            {scored.map(({ tender, breakdown }) => (
               <li
                 key={tender.id}
                 className="rounded-xl border border-zinc-200 bg-white p-5 transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700"
@@ -119,21 +141,27 @@ const Home = async () => {
                   >
                     {tender.title}
                   </a>
-                  <time className="shrink-0 text-xs text-zinc-400">
-                    {formatDate(tender.publicationDate)}
-                  </time>
+                  <ScoreBadge score={breakdown.score} />
                 </div>
-                {tender.description && (
-                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                    {tender.description}
-                  </p>
-                )}
+
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400">
+                  <time>{formatDate(tender.publicationDate)}</time>
+                  {tender.region && <span>· {tender.region}</span>}
+                  {tender.description && <span>· {tender.description}</span>}
+                </div>
+
                 {tender.cpvCodes && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {splitList(tender.cpvCodes).map((code) => (
                       <Chip key={code}>{code}</Chip>
                     ))}
                   </div>
+                )}
+
+                {breakdown.reasons.length > 0 && (
+                  <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+                    {breakdown.reasons.join(' · ')}
+                  </p>
                 )}
               </li>
             ))}
