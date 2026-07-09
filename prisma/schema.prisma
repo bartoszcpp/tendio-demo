@@ -13,6 +13,7 @@ model Tender {
   title           String
   description     String?
   cpvCodes        String   
+  publicationDate DateTime?
   url             String
   
   score           Int?     

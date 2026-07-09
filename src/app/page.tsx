@@ -1,65 +1,147 @@
-import Image from "next/image";
+import { prisma } from '@/lib/prisma';
+import { SyncTendersButton } from '@/components/sync-tenders-button';
 
-export default function Home() {
+export const dynamic = 'force-dynamic';
+
+const dateFormatter = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium' });
+const budgetFormatter = new Intl.NumberFormat('pl-PL', {
+  style: 'currency',
+  currency: 'PLN',
+  maximumFractionDigits: 0,
+});
+
+const formatDate = (date: Date | null) => (date ? dateFormatter.format(date) : '—');
+
+const splitList = (value: string) =>
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const Chip = ({ children }: { children: React.ReactNode }) => (
+  <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+    {children}
+  </span>
+);
+
+const Home = async () => {
+  const [profile, tenders] = await Promise.all([
+    prisma.profile.findFirst(),
+    prisma.tender.findMany({ orderBy: { publicationDate: 'desc' } }),
+  ]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 sm:py-16">
+      <header className="mb-10">
+        <p className="text-sm font-medium uppercase tracking-widest text-zinc-400">Tendio</p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          Przetargi dopasowane do Twojej firmy
+        </h1>
+      </header>
+
+      {profile ? (
+        <section className="mb-12 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              {profile.companyName}
+            </h2>
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              {budgetFormatter.format(profile.minBudget)} – {budgetFormatter.format(profile.maxBudget)}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{profile.industry}</p>
+
+          <dl className="mt-5 space-y-4">
+            <div>
+              <dt className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                Słowa kluczowe
+              </dt>
+              <dd className="flex flex-wrap gap-2">
+                {splitList(profile.keywords).map((keyword) => (
+                  <Chip key={keyword}>{keyword}</Chip>
+                ))}
+              </dd>
+            </div>
+            <div>
+              <dt className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                Kody CPV
+              </dt>
+              <dd className="flex flex-wrap gap-2">
+                {splitList(profile.cpvCodes).map((code) => (
+                  <Chip key={code}>{code}</Chip>
+                ))}
+              </dd>
+            </div>
+            <div>
+              <dt className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                Regiony
+              </dt>
+              <dd className="flex flex-wrap gap-2">
+                {splitList(profile.regions).map((region) => (
+                  <Chip key={region}>{region}</Chip>
+                ))}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      ) : (
+        <section className="mb-12 rounded-2xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+          Brak profilu firmy. Uruchom seed bazy danych, aby dodać profil.
+        </section>
+      )}
+
+      <section>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Ogłoszenia{' '}
+            <span className="text-zinc-400">({tenders.length})</span>
+          </h2>
+          <SyncTendersButton />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {tenders.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-zinc-300 p-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+            Brak zapisanych ogłoszeń. Kliknij „Pobierz najnowsze ogłoszenia”, aby zasilić bazę.
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {tenders.map((tender) => (
+              <li
+                key={tender.id}
+                className="rounded-xl border border-zinc-200 bg-white p-5 transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <a
+                    href={tender.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-zinc-900 hover:underline dark:text-zinc-50"
+                  >
+                    {tender.title}
+                  </a>
+                  <time className="shrink-0 text-xs text-zinc-400">
+                    {formatDate(tender.publicationDate)}
+                  </time>
+                </div>
+                {tender.description && (
+                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                    {tender.description}
+                  </p>
+                )}
+                {tender.cpvCodes && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {splitList(tender.cpvCodes).map((code) => (
+                      <Chip key={code}>{code}</Chip>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
   );
-}
+};
+
+export default Home;
