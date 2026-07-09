@@ -1,6 +1,6 @@
-# Tendio
+# GovMatch Demo
 
-Tendio automatically finds public procurement tenders matched to a company's profile and suggests — with the help of AI — which ones are worth bidding on. Data comes from two sources: Poland's national **e-Zamówienia** and the EU-wide **TED (Tenders Electronic Daily)**.
+GovMatch automatically finds public procurement tenders matched to a company's profile and suggests — with the help of AI — which ones are worth bidding on. Data comes from two sources: Poland's national **e-Zamówienia** and the EU-wide **TED (Tenders Electronic Daily)**.
 
 ## Features
 
