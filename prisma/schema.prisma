@@ -26,6 +26,12 @@ model Tender {
   updatedAt       DateTime @updatedAt
 }
 
+model DemoUser {
+  id       String @id @default(uuid())
+  username String @unique
+  aiUses   Int    @default(0)
+}
+
 model Profile {
   id           String   @id @default(uuid())
   companyName  String

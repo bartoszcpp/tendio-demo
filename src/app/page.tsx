@@ -1,5 +1,8 @@
+import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { scoreTender } from '@/lib/scoring';
+import { getCurrentUser, getRemainingAiUses, AI_LIMIT } from '@/lib/auth';
+import { logout } from '@/actions/auth';
 import { SyncTendersButton } from '@/components/sync-tenders-button';
 import { AnalyzeTender } from '@/components/analyze-tender';
 
@@ -41,9 +44,13 @@ const ScoreBadge = ({ score }: { score: number }) => (
 );
 
 const Home = async () => {
-  const [profile, tenders] = await Promise.all([
+  const username = await getCurrentUser();
+  if (!username) redirect('/login');
+
+  const [profile, tenders, remainingAiUses] = await Promise.all([
     prisma.profile.findFirst(),
     prisma.tender.findMany({ orderBy: { publicationDate: 'desc' } }),
+    getRemainingAiUses(username),
   ]);
 
   const scored = tenders
@@ -55,11 +62,27 @@ const Home = async () => {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 sm:py-16">
-      <header className="mb-10">
-        <p className="text-sm font-medium uppercase tracking-widest text-zinc-400">Tendio</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Przetargi dopasowane do Twojej firmy
-        </h1>
+      <header className="mb-10 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium uppercase tracking-widest text-zinc-400">Tendio</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Przetargi dopasowane do Twojej firmy
+          </h1>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1 text-sm">
+          <span className="text-zinc-500 dark:text-zinc-400">{username}</span>
+          <span className="text-xs text-zinc-400">
+            Analizy AI: {remainingAiUses}/{AI_LIMIT}
+          </span>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+            >
+              Wyloguj
+            </button>
+          </form>
+        </div>
       </header>
 
       {profile ? (
@@ -170,6 +193,7 @@ const Home = async () => {
                   aiSummary={tender.aiSummary}
                   aiDecision={tender.aiDecision}
                   aiReason={tender.aiReason}
+                  remaining={remainingAiUses}
                 />
               </li>
             ))}

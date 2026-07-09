@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { scoreTender } from '@/lib/scoring';
+import { getCurrentUser } from '@/lib/auth';
 
 const EZAMOWIENIA_API = 'https://ezamowienia.gov.pl/mo-board/api/v1/notice';
 const NOTICE_PAGE_SIZE = 100;
@@ -53,6 +54,9 @@ const fetchNotices = async (): Promise<EzamowieniaNotice[]> => {
 };
 
 export const syncTenders = async (): Promise<SyncResult> => {
+  const username = await getCurrentUser();
+  if (!username) throw new Error('Musisz być zalogowany.');
+
   const notices = await fetchNotices();
 
   const unique = Array.from(

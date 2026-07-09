@@ -23,9 +23,10 @@ type Props = {
   aiSummary: string | null;
   aiDecision: string | null;
   aiReason: string | null;
+  remaining: number;
 };
 
-export const AnalyzeTender = ({ tenderId, aiSummary, aiDecision, aiReason }: Props) => {
+export const AnalyzeTender = ({ tenderId, aiSummary, aiDecision, aiReason, remaining }: Props) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -48,20 +49,26 @@ export const AnalyzeTender = ({ tenderId, aiSummary, aiDecision, aiReason }: Pro
     });
   };
 
+  const blocked = remaining <= 0;
+
   if (!analysis) {
     return (
       <div className="mt-4">
-        <button
-          type="button"
-          onClick={run}
-          disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
-        >
-          {isPending && (
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          )}
-          {isPending ? 'Analizuję…' : 'Analizuj z AI'}
-        </button>
+        {blocked ? (
+          <p className="text-sm text-zinc-400">Limit analiz AI wyczerpany.</p>
+        ) : (
+          <button
+            type="button"
+            onClick={run}
+            disabled={isPending}
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            {isPending && (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            )}
+            {isPending ? 'Analizuję…' : 'Analizuj z AI'}
+          </button>
+        )}
         {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
       </div>
     );
@@ -75,14 +82,16 @@ export const AnalyzeTender = ({ tenderId, aiSummary, aiDecision, aiReason }: Pro
         >
           {decisionLabel[analysis.recommendation]}
         </span>
-        <button
-          type="button"
-          onClick={run}
-          disabled={isPending}
-          className="text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-800 disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
-        >
-          {isPending ? 'Analizuję…' : 'Analizuj ponownie'}
-        </button>
+        {!blocked && (
+          <button
+            type="button"
+            onClick={run}
+            disabled={isPending}
+            className="text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-800 disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            {isPending ? 'Analizuję…' : 'Analizuj ponownie'}
+          </button>
+        )}
       </div>
       <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-200">{analysis.summary}</p>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{analysis.reason}</p>
